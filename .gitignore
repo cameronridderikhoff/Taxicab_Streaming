@@ -1,2 +1,15 @@
 .data/
 .env
+.cursor/
+# Raw dataset (large CSVs, keep out of git)
+data/
+
+# Bicep / ARM
+*.bicep.generated.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/

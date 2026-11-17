@@ -14,6 +14,12 @@ We will ensure the data only ever flows through a private network, for practice 
 
 We will need to implement a CI/CD process, and infrastructure as code.
 
+Wide coverage of tools and technologies is most important.
+
+Peex has problems with AI genereated code - people dont understand whats happening
+
+Use bicep instead of terraform for resourcing
+
 ## People Excellence (PeEx) jobs to cover
 
 ### Streaming 
