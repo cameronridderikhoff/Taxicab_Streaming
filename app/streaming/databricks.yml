@@ -1,0 +1,23 @@
+# Scaffold for Phase 2. Targets are filled in after the Databricks workspace is provisioned via Bicep.
+bundle:
+  name: taxicab-streaming
+
+variables:
+  trigger_interval:
+    description: Structured Streaming micro-batch trigger (e.g. 10 seconds).
+    default: 10 seconds
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      # Set host after first Bicep deploy, or use DATABRICKS_HOST in CI.
+      host: https://adb-placeholder.azuredatabricks.net
+
+# resources:
+#   jobs:
+#     medallion_stream:
+#       name: taxicab-medallion-stream
+#       job_clusters: ...
+#       tasks: ...

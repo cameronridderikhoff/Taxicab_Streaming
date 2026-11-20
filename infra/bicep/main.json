@@ -1,0 +1,867 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.49.2.45890",
+      "templateHash": "13279097333390824396"
+    }
+  },
+  "parameters": {
+    "project": {
+      "type": "string",
+      "defaultValue": "taxicab",
+      "metadata": {
+        "description": "Short project name used as a prefix for resource names."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "metadata": {
+        "description": "Deployment environment (e.g. dev, staging)."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "servicebusCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "allowedValues": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "metadata": {
+        "description": "Service Bus Premium messaging units (1, 2, 4, 8, 16)."
+      }
+    },
+    "addressSpace": {
+      "type": "string",
+      "defaultValue": "10.20.0.0/16",
+      "metadata": {
+        "description": "VNet CIDR. Subnets are carved out with /24 prefixes."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {
+        "project": "taxicab-streaming",
+        "managed_by": "bicep",
+        "purpose": "peex-pet-project"
+      },
+      "metadata": {
+        "description": "Common tags applied to all resources."
+      }
+    }
+  },
+  "variables": {
+    "namePrefix": "[format('{0}-{1}', parameters('project'), parameters('environment'))]",
+    "suffix": "[take(uniqueString(subscription().id, parameters('project'), parameters('environment'), parameters('location')), 5)]",
+    "mergedTags": "[union(parameters('tags'), createObject('environment', parameters('environment')))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-03-01",
+      "name": "[format('rg-{0}', variables('namePrefix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('mergedTags')]"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "monitoring-deployment",
+      "resourceGroup": "[format('rg-{0}', variables('namePrefix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('mergedTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.49.2.45890",
+              "templateHash": "13508153112467512431"
+            }
+          },
+          "parameters": {
+            "namePrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource name prefix (project-environment)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Common tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[format('log-{0}', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": 30
+              }
+            }
+          ],
+          "outputs": {
+            "workspaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', format('log-{0}', parameters('namePrefix')))]"
+            },
+            "workspaceName": {
+              "type": "string",
+              "value": "[format('log-{0}', parameters('namePrefix'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}', variables('namePrefix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "network-deployment",
+      "resourceGroup": "[format('rg-{0}', variables('namePrefix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "addressSpace": {
+            "value": "[parameters('addressSpace')]"
+          },
+          "tags": {
+            "value": "[variables('mergedTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.49.2.45890",
+              "templateHash": "7027649933550835887"
+            }
+          },
+          "parameters": {
+            "namePrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource name prefix (project-environment)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "addressSpace": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet CIDR."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Common tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2024-05-01",
+              "name": "[format('vnet-{0}', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('addressSpace')]"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2024-05-01",
+              "name": "[format('nsg-simulator-{0}', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "securityRules": [
+                  {
+                    "name": "DenyInternetInbound",
+                    "properties": {
+                      "priority": 4000,
+                      "direction": "Inbound",
+                      "access": "Deny",
+                      "protocol": "*",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "*",
+                      "sourceAddressPrefix": "Internet",
+                      "destinationAddressPrefix": "*"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2024-05-01",
+              "name": "[format('nsg-management-{0}', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "securityRules": [
+                  {
+                    "name": "DenyInternetInbound",
+                    "properties": {
+                      "priority": 4000,
+                      "direction": "Inbound",
+                      "access": "Deny",
+                      "protocol": "*",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "*",
+                      "sourceAddressPrefix": "Internet",
+                      "destinationAddressPrefix": "*"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2024-05-01",
+              "name": "[format('{0}/{1}', format('vnet-{0}', parameters('namePrefix')), 'snet-simulator')]",
+              "properties": {
+                "addressPrefix": "[cidrSubnet(parameters('addressSpace'), 8, 1)]",
+                "networkSecurityGroup": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-simulator-{0}', parameters('namePrefix')))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-simulator-{0}', parameters('namePrefix')))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('namePrefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2024-05-01",
+              "name": "[format('{0}/{1}', format('vnet-{0}', parameters('namePrefix')), 'snet-private-endpoints')]",
+              "properties": {
+                "addressPrefix": "[cidrSubnet(parameters('addressSpace'), 8, 2)]",
+                "privateEndpointNetworkPolicies": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('namePrefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2024-05-01",
+              "name": "[format('{0}/{1}', format('vnet-{0}', parameters('namePrefix')), 'snet-management')]",
+              "properties": {
+                "addressPrefix": "[cidrSubnet(parameters('addressSpace'), 8, 3)]",
+                "networkSecurityGroup": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-management-{0}', parameters('namePrefix')))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-management-{0}', parameters('namePrefix')))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('namePrefix')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('namePrefix')))]"
+            },
+            "vnetName": {
+              "type": "string",
+              "value": "[format('vnet-{0}', parameters('namePrefix'))]"
+            },
+            "subnetIds": {
+              "type": "object",
+              "value": {
+                "simulator": "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-{0}', parameters('namePrefix')), 'snet-simulator')]",
+                "private_endpoints": "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-{0}', parameters('namePrefix')), 'snet-private-endpoints')]",
+                "management": "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-{0}', parameters('namePrefix')), 'snet-management')]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}', variables('namePrefix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "security-deployment",
+      "resourceGroup": "[format('rg-{0}', variables('namePrefix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "suffix": {
+            "value": "[variables('suffix')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tenantId": {
+            "value": "[deployer().tenantId]"
+          },
+          "adminObjectId": {
+            "value": "[deployer().objectId]"
+          },
+          "logAnalyticsId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('namePrefix'))), 'Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.workspaceId.value]"
+          },
+          "tags": {
+            "value": "[variables('mergedTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.49.2.45890",
+              "templateHash": "17024685501412468982"
+            }
+          },
+          "parameters": {
+            "namePrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource name prefix (project-environment)."
+              }
+            },
+            "suffix": {
+              "type": "string",
+              "metadata": {
+                "description": "Short suffix for global uniqueness."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "tenantId": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure AD tenant ID."
+              }
+            },
+            "adminObjectId": {
+              "type": "string",
+              "metadata": {
+                "description": "Object ID of the identity that manages Key Vault secrets."
+              }
+            },
+            "adminPrincipalType": {
+              "type": "string",
+              "defaultValue": "User",
+              "allowedValues": [
+                "User",
+                "Group",
+                "ServicePrincipal"
+              ],
+              "metadata": {
+                "description": "Principal type of the Key Vault admin identity (User for az login, ServicePrincipal for CI)."
+              }
+            },
+            "logAnalyticsId": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace ID for diagnostics."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Common tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[format('kv-{0}-{1}', parameters('namePrefix'), parameters('suffix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "enableRbacAuthorization": true,
+                "enablePurgeProtection": false,
+                "softDeleteRetentionInDays": 7,
+                "publicNetworkAccess": "enabled"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}-{1}', parameters('namePrefix'), parameters('suffix')))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', format('kv-{0}-{1}', parameters('namePrefix'), parameters('suffix'))), parameters('adminObjectId'), 'Key Vault Secrets Officer')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')]",
+                "principalId": "[parameters('adminObjectId')]",
+                "principalType": "[parameters('adminPrincipalType')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}-{1}', parameters('namePrefix'), parameters('suffix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}-{1}', parameters('namePrefix'), parameters('suffix')))]",
+              "name": "diag-kv",
+              "properties": {
+                "workspaceId": "[parameters('logAnalyticsId')]",
+                "logs": [
+                  {
+                    "category": "AuditEvent",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}-{1}', parameters('namePrefix'), parameters('suffix')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "keyVaultId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}-{1}', parameters('namePrefix'), parameters('suffix')))]"
+            },
+            "keyVaultUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', format('kv-{0}-{1}', parameters('namePrefix'), parameters('suffix'))), '2023-07-01').vaultUri]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('namePrefix'))), 'Microsoft.Resources/deployments', 'monitoring-deployment')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}', variables('namePrefix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "storage-deployment",
+      "resourceGroup": "[format('rg-{0}', variables('namePrefix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "suffix": {
+            "value": "[variables('suffix')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('mergedTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.49.2.45890",
+              "templateHash": "15556548008788484244"
+            }
+          },
+          "parameters": {
+            "namePrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource name prefix (project-environment)."
+              }
+            },
+            "suffix": {
+              "type": "string",
+              "metadata": {
+                "description": "Short suffix for global uniqueness."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Common tags."
+              }
+            }
+          },
+          "variables": {
+            "storageAccountName": "[take(format('st{0}{1}', replace(parameters('namePrefix'), '-', ''), parameters('suffix')), 24)]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[variables('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "isHnsEnabled": true,
+                "minimumTlsVersion": "TLS1_2",
+                "allowBlobPublicAccess": false,
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'processed')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+            },
+            "storageAccountName": {
+              "type": "string",
+              "value": "[variables('storageAccountName')]"
+            },
+            "processedFilesystemName": {
+              "type": "string",
+              "value": "processed"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}', variables('namePrefix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "messaging-deployment",
+      "resourceGroup": "[format('rg-{0}', variables('namePrefix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "suffix": {
+            "value": "[variables('suffix')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "capacity": {
+            "value": "[parameters('servicebusCapacity')]"
+          },
+          "logAnalyticsId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('namePrefix'))), 'Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.workspaceId.value]"
+          },
+          "tags": {
+            "value": "[variables('mergedTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.49.2.45890",
+              "templateHash": "6940010771995673801"
+            }
+          },
+          "parameters": {
+            "namePrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource name prefix (project-environment)."
+              }
+            },
+            "suffix": {
+              "type": "string",
+              "metadata": {
+                "description": "Short suffix for global uniqueness."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "capacity": {
+              "type": "int",
+              "metadata": {
+                "description": "Service Bus Premium messaging units."
+              }
+            },
+            "logAnalyticsId": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace ID for diagnostics."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Common tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ServiceBus/namespaces",
+              "apiVersion": "2022-10-01-preview",
+              "name": "[format('sb-{0}-{1}', parameters('namePrefix'), parameters('suffix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Premium",
+                "tier": "Premium",
+                "capacity": "[parameters('capacity')]"
+              },
+              "properties": {
+                "publicNetworkAccess": "Enabled",
+                "minimumTlsVersion": "1.2"
+              }
+            },
+            {
+              "type": "Microsoft.ServiceBus/namespaces/topics",
+              "apiVersion": "2022-10-01-preview",
+              "name": "[format('{0}/{1}', format('sb-{0}-{1}', parameters('namePrefix'), parameters('suffix')), 'taxi-trips')]",
+              "properties": {
+                "defaultMessageTimeToLive": "PT1H",
+                "duplicateDetectionHistoryTimeWindow": "PT10M",
+                "requiresDuplicateDetection": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', format('sb-{0}-{1}', parameters('namePrefix'), parameters('suffix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ServiceBus/namespaces/topics/subscriptions",
+              "apiVersion": "2022-10-01-preview",
+              "name": "[format('{0}/{1}/{2}', format('sb-{0}-{1}', parameters('namePrefix'), parameters('suffix')), 'taxi-trips', 'fabric-stream')]",
+              "properties": {
+                "maxDeliveryCount": 10,
+                "lockDuration": "PT30S"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces/topics', format('sb-{0}-{1}', parameters('namePrefix'), parameters('suffix')), 'taxi-trips')]"
+              ]
+            },
+            {
+              "type": "Microsoft.ServiceBus/namespaces/topics/subscriptions",
+              "apiVersion": "2022-10-01-preview",
+              "name": "[format('{0}/{1}/{2}', format('sb-{0}-{1}', parameters('namePrefix'), parameters('suffix')), 'taxi-trips', 'monitoring-tap')]",
+              "properties": {
+                "maxDeliveryCount": 10,
+                "lockDuration": "PT30S"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces/topics', format('sb-{0}-{1}', parameters('namePrefix'), parameters('suffix')), 'taxi-trips')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[resourceId('Microsoft.ServiceBus/namespaces', format('sb-{0}-{1}', parameters('namePrefix'), parameters('suffix')))]",
+              "name": "diag-servicebus",
+              "properties": {
+                "workspaceId": "[parameters('logAnalyticsId')]",
+                "logs": [
+                  {
+                    "category": "OperationalLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', format('sb-{0}-{1}', parameters('namePrefix'), parameters('suffix')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "namespaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ServiceBus/namespaces', format('sb-{0}-{1}', parameters('namePrefix'), parameters('suffix')))]"
+            },
+            "namespaceName": {
+              "type": "string",
+              "value": "[format('sb-{0}-{1}', parameters('namePrefix'), parameters('suffix'))]"
+            },
+            "topicName": {
+              "type": "string",
+              "value": "taxi-trips"
+            },
+            "fabricSubscriptionName": {
+              "type": "string",
+              "value": "fabric-stream"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('namePrefix'))), 'Microsoft.Resources/deployments', 'monitoring-deployment')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}', variables('namePrefix')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[format('rg-{0}', variables('namePrefix'))]"
+    },
+    "location": {
+      "type": "string",
+      "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}', variables('namePrefix'))), '2024-03-01', 'full').location]"
+    },
+    "vnetId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('namePrefix'))), 'Microsoft.Resources/deployments', 'network-deployment'), '2025-04-01').outputs.vnetId.value]"
+    },
+    "subnetIds": {
+      "type": "object",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('namePrefix'))), 'Microsoft.Resources/deployments', 'network-deployment'), '2025-04-01').outputs.subnetIds.value]"
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('namePrefix'))), 'Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.workspaceId.value]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('namePrefix'))), 'Microsoft.Resources/deployments', 'security-deployment'), '2025-04-01').outputs.keyVaultUri.value]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('namePrefix'))), 'Microsoft.Resources/deployments', 'storage-deployment'), '2025-04-01').outputs.storageAccountName.value]"
+    },
+    "servicebusNamespaceName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('namePrefix'))), 'Microsoft.Resources/deployments', 'messaging-deployment'), '2025-04-01').outputs.namespaceName.value]"
+    },
+    "servicebusTopicName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('namePrefix'))), 'Microsoft.Resources/deployments', 'messaging-deployment'), '2025-04-01').outputs.topicName.value]"
+    }
+  }
+}
